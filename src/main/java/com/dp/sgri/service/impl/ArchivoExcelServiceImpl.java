@@ -7,6 +7,7 @@ import com.dp.sgri.service.ArchivoExcelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.security.MessageDigest;
@@ -49,6 +50,7 @@ public class ArchivoExcelServiceImpl implements ArchivoExcelService {
         }
     }
     @Override
+    @Transactional(readOnly = true)
     public List<ArchivoExcel> listarPorTipo(TipoArchivo tipo) {
         return repository.findByTipoArchivo(tipo);
     }

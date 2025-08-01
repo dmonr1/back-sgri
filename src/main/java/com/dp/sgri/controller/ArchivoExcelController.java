@@ -1,5 +1,6 @@
 package com.dp.sgri.controller;
 
+import com.dp.sgri.dto.ClienteSoftwareDTO;
 import com.dp.sgri.entity.ArchivoExcel;
 import com.dp.sgri.entity.TipoArchivo;
 import com.dp.sgri.service.ArchivoExcelService;
@@ -77,6 +78,18 @@ public class ArchivoExcelController {
     public ResponseEntity<List<ArchivoExcel>> listarTodos() {
         List<ArchivoExcel> archivos = archivoExcelService.listarTodos();
         return ResponseEntity.ok(archivos);
+    }
+
+
+    @GetMapping("/{id}/software-datos")
+    public ResponseEntity<List<ClienteSoftwareDTO>> obtenerDatosSoftware(
+            @PathVariable Long id,
+            @RequestParam String cliente) {
+        List<ClienteSoftwareDTO> datos = archivoExcelService.buscarClienteSoftware(id, cliente);
+        if (datos.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(datos);
     }
 
 }

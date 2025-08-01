@@ -9,11 +9,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import com.dp.sgri.dto.ClienteSoftwareDTO;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 @Service
 public class ArchivoExcelServiceImpl implements ArchivoExcelService {
@@ -83,5 +88,51 @@ public class ArchivoExcelServiceImpl implements ArchivoExcelService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("No se pudo calcular el hash SHA-256", e);
         }
+    }
+
+    @Override
+    public List<ClienteSoftwareDTO> buscarClienteSoftware(Long id, String clienteBuscado) {
+        ArchivoExcel archivo = obtenerPorId(id);
+        List<ClienteSoftwareDTO> resultados = new ArrayList<>();
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(archivo.getContenido()))) {
+            Sheet hoja = workbook.getSheetAt(0);
+
+            int columnas = hoja.getRow(0).getPhysicalNumberOfCells();
+
+            for (int i = 1; i <= hoja.getLastRowNum(); i++) {
+                Row fila = hoja.getRow(i);
+                if (fila == null) continue;
+
+                String cliente = obtenerTextoCelda(fila.getCell(0)).toLowerCase();
+                if (cliente.contains(clienteBuscado.toLowerCase())) {
+                    ClienteSoftwareDTO dto = new ClienteSoftwareDTO();
+                    dto.setCliente(obtenerTextoCelda(fila.getCell(0)));
+                    dto.setInstalado(obtenerTextoCelda(fila.getCell(1)));
+                    dto.setNombre(obtenerTextoCelda(fila.getCell(2)));
+                    dto.setFecha(obtenerTextoCelda(fila.getCell(3)));
+                    dto.setVersion(obtenerTextoCelda(fila.getCell(4)));
+                    dto.setFabricante(obtenerTextoCelda(fila.getCell(5)));
+                    dto.setUsuario(obtenerTextoCelda(fila.getCell(6)));
+                    resultados.add(dto);
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Error procesando el archivo Excel", e);
+        }
+
+        return resultados;
+    }
+
+    private String obtenerTextoCelda(Cell celda) {
+        if (celda == null) return "";
+        if (celda.getCellType() == CellType.NUMERIC) {
+            if (DateUtil.isCellDateFormatted(celda)) {
+                return celda.getLocalDateTimeCellValue().toLocalDate().toString();
+            } else {
+                return String.valueOf((long) celda.getNumericCellValue());
+            }
+        }
+        return celda.toString().trim();
     }
 }

@@ -63,7 +63,7 @@ public class ArchivoExcelController {
         if (archivos.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        ArchivoExcel ultimo = archivos.get(archivos.size() - 1); // suponiendo orden por fecha
+        ArchivoExcel ultimo = archivos.get(archivos.size() - 1);
         return ResponseEntity.ok(ultimo);
     }
 
@@ -91,5 +91,33 @@ public class ArchivoExcelController {
         }
         return ResponseEntity.ok(datos);
     }
+
+    @GetMapping("/{id}/software-clientes-unicos")
+    public ResponseEntity<List<String>> obtenerClientesUnicosSoftware(@PathVariable Long id) {
+        List<String> clientes = archivoExcelService.obtenerClientesUnicosDesdeSoftware(id);
+        if (clientes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(clientes);
+    }
+
+    @GetMapping("/{id}/resumen-clientes-unicos")
+    public ResponseEntity<List<String>> obtenerClientesUnicosResumen(@PathVariable Long id) {
+        List<String> clientes = archivoExcelService.obtenerClientesUnicosDesdeResumen(id);
+        if (clientes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(clientes);
+    }
+
+    @GetMapping("/{id}/hardware-clientes-unicos")
+    public ResponseEntity<List<String>> obtenerClientesUnicosHardware(@PathVariable Long id) {
+        List<String> clientes = archivoExcelService.obtenerClientesUnicosDesdeHardware(id);
+        if (clientes.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(clientes);
+    }
+
 
 }

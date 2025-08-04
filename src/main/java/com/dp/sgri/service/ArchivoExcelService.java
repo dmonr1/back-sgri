@@ -14,5 +14,8 @@ public interface ArchivoExcelService {
     void eliminarPorId(Long id);
     List<ArchivoExcel> listarTodos();
     List<ClienteSoftwareDTO> buscarClienteSoftware(Long id, String cliente);
+    List<String> obtenerClientesUnicosDesdeSoftware(Long archivoId);
+    List<String> obtenerClientesUnicosDesdeResumen(Long archivoId);
+    List<String> obtenerClientesUnicosDesdeHardware(Long archivoId);
 
 }

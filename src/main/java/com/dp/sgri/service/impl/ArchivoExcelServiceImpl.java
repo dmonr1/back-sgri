@@ -11,11 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import com.dp.sgri.dto.ClienteSoftwareDTO;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -126,13 +130,125 @@ public class ArchivoExcelServiceImpl implements ArchivoExcelService {
 
     private String obtenerTextoCelda(Cell celda) {
         if (celda == null) return "";
-        if (celda.getCellType() == CellType.NUMERIC) {
-            if (DateUtil.isCellDateFormatted(celda)) {
-                return celda.getLocalDateTimeCellValue().toLocalDate().toString();
-            } else {
-                return String.valueOf((long) celda.getNumericCellValue());
-            }
+
+        String valor;
+
+        switch (celda.getCellType()) {
+            case STRING:
+                valor = celda.getStringCellValue().trim();
+                break;
+            case NUMERIC:
+                if (DateUtil.isCellDateFormatted(celda)) {
+                    valor = celda.getLocalDateTimeCellValue().toLocalDate().toString();
+                } else {
+                    valor = String.valueOf((long) celda.getNumericCellValue());
+                }
+                break;
+            case BOOLEAN:
+                valor = celda.getBooleanCellValue() ? "Sí" : "No";
+                break;
+            case FORMULA:
+                try {
+                    valor = celda.getStringCellValue().trim(); // o celda.getRichStringCellValue().getString()
+                } catch (Exception e) {
+                    valor = String.valueOf(celda.getNumericCellValue());
+                }
+                break;
+            default:
+                valor = "";
         }
-        return celda.toString().trim();
+
+        return repararTexto(valor);
     }
+
+
+    private String repararTexto(String textoDañado) {
+        if (textoDañado == null || textoDañado.isEmpty()) return textoDañado;
+        try {
+            byte[] bytes = textoDañado.getBytes("ISO-8859-1");
+            return new String(bytes, "UTF-8");
+        } catch (Exception e) {
+            return textoDañado;
+        }
+    }
+
+
+
+    public List<String> obtenerClientesUnicosDesdeSoftware(Long archivoId) {
+        ArchivoExcel archivo = obtenerPorId(archivoId);
+
+        if (!archivo.getTipoArchivo().equals(TipoArchivo.software)) {
+            throw new IllegalArgumentException("El archivo no es de tipo software.");
+        }
+
+        try (InputStream inputStream = new ByteArrayInputStream(archivo.getContenido())) {
+            Workbook workbook = WorkbookFactory.create(inputStream);
+            Sheet sheet = workbook.getSheetAt(0);
+
+            Set<String> clientesUnicos = new HashSet<>();
+
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) continue; // omitir encabezado
+
+                Cell clienteCell = row.getCell(0); // primera columna
+                if (clienteCell != null) {
+                    clienteCell.setCellType(CellType.STRING);
+                    String valor = clienteCell.getStringCellValue().trim();
+                    if (!valor.isEmpty()) {
+                        clientesUnicos.add(valor);
+                    }
+                }
+            }
+
+            workbook.close();
+            return new ArrayList<>(clientesUnicos);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al leer el archivo Excel", e);
+        }
+    }
+
+    @Override
+    public List<String> obtenerClientesUnicosDesdeResumen(Long archivoId) {
+        return obtenerClientesUnicosGenerico(archivoId, TipoArchivo.resumen);
+    }
+
+    @Override
+    public List<String> obtenerClientesUnicosDesdeHardware(Long archivoId) {
+        return obtenerClientesUnicosGenerico(archivoId, TipoArchivo.hardware);
+    }
+
+    private List<String> obtenerClientesUnicosGenerico(Long archivoId, TipoArchivo tipoEsperado) {
+        ArchivoExcel archivo = obtenerPorId(archivoId);
+
+        if (!archivo.getTipoArchivo().equals(tipoEsperado)) {
+            throw new IllegalArgumentException("El archivo no es de tipo " + tipoEsperado.name());
+        }
+
+        try (InputStream inputStream = new ByteArrayInputStream(archivo.getContenido())) {
+            Workbook workbook = WorkbookFactory.create(inputStream);
+            Sheet sheet = workbook.getSheetAt(0);
+            Set<String> clientesUnicos = new HashSet<>();
+
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) continue;
+                Cell clienteCell = row.getCell(0);
+                if (clienteCell != null) {
+                    clienteCell.setCellType(CellType.STRING);
+                    String valor = clienteCell.getStringCellValue().trim();
+                    if (!valor.isEmpty()) {
+                        clientesUnicos.add(repararTexto(valor));
+                    }
+                }
+            }
+
+            workbook.close();
+            return new ArrayList<>(clientesUnicos);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al leer el archivo Excel", e);
+        }
+    }
+
+
 }
